@@ -27,7 +27,7 @@ if (WIN32)
 endif (WIN32)
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-	set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/${POLYDIM_INSTALL_DIR} CACHE PATH "Install path prefix, prepended onto install directories." FORCE)
+      set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/${POLYDIM_INSTALL_DIR} CACHE PATH "Install path prefix, prepended onto install directories." FORCE)
 endif()
 Message(STATUS "PolyDiM Library will be installed in: " ${CMAKE_INSTALL_PREFIX})
 
