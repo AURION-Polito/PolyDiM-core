@@ -14,8 +14,11 @@
 
 #include "MeshDAOImporterFromCsv.hpp"
 #include "MeshFromCsvUtilities.hpp"
-#include "MeshMatricesDAO.hpp"
 #include "MeshUtilities.hpp"
+#include "TetgenInterface.hpp"
+#include "TriangleInterface.hpp"
+#include "VoroInterface.hpp"
+#include "VtkMeshInterface.hpp"
 
 namespace Polydim
 {
@@ -131,14 +134,12 @@ enum class MeshGenerator_Types_3D
 /// the segment into cells whose relative length does not exceed @p max_relative_length.
 ///
 /// @param geometry_utilities   GeDiM geometry helper.
-/// @param mesh_utilities       GeDiM mesh helper.
 /// @param mesh_type            Generator to use.
 /// @param pde_domain           Segment domain.
 /// @param max_relative_length  Target cell length relative to the segment (Equispaced only).
 /// @param[out] mesh            Resulting mesh.
 /// @throws std::runtime_error if @p mesh_type is not a supported 1D generator.
 inline void create_mesh_1D(const Gedim::GeometryUtilities &geometry_utilities,
-                           const Gedim::MeshUtilities &mesh_utilities,
                            const Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_1D &mesh_type,
                            const Polydim::PDETools::Mesh::PDE_Mesh_Utilities::PDE_Domain_1D &pde_domain,
                            const double &max_relative_length,
@@ -150,7 +151,7 @@ inline void create_mesh_1D(const Gedim::GeometryUtilities &geometry_utilities,
         const Eigen::Vector3d segment_origin = pde_domain.vertices.col(0);
         const Eigen::Vector3d segment_tangent = pde_domain.vertices.col(1) - segment_origin;
         const std::vector<double> coordinates = {0.0, 1.0};
-        mesh_utilities.FillMesh1D(geometry_utilities, segment_origin, segment_tangent, coordinates, mesh);
+        Gedim::MeshUtilities::FillMesh1D(geometry_utilities, segment_origin, segment_tangent, coordinates, mesh);
     }
     break;
     case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_1D::Equispaced: {
@@ -158,11 +159,11 @@ inline void create_mesh_1D(const Gedim::GeometryUtilities &geometry_utilities,
         const Eigen::Vector3d segment_tangent = pde_domain.vertices.col(1) - segment_origin;
         const unsigned int num_points = round(1.0 / max_relative_length) + 1;
 
-        mesh_utilities.FillMesh1D(geometry_utilities,
-                                  segment_origin,
-                                  segment_tangent,
-                                  geometry_utilities.EquispaceCoordinates(num_points, 0.0, 1.0, true),
-                                  mesh);
+        Gedim::MeshUtilities::FillMesh1D(geometry_utilities,
+                                         segment_origin,
+                                         segment_tangent,
+                                         geometry_utilities.EquispaceCoordinates(num_points, 0.0, 1.0, true),
+                                         mesh);
     }
     break;
     default:
@@ -179,7 +180,6 @@ inline void create_mesh_1D(const Gedim::GeometryUtilities &geometry_utilities,
 /// @p max_relative_area (target cell area relative to the domain area).
 ///
 /// @param geometry_utilities GeDiM geometry helper.
-/// @param mesh_utilities     GeDiM mesh helper.
 /// @param mesh_type          Generator to use.
 /// @param pde_domain         2D domain.
 /// @param max_relative_area  Target cell area relative to the domain area.
@@ -187,7 +187,6 @@ inline void create_mesh_1D(const Gedim::GeometryUtilities &geometry_utilities,
 /// @throws std::runtime_error if @p mesh_type is unsupported, a required library
 ///         (Triangle, Voro++) is disabled, or a structured generator is used on a non-parallelogram domain.
 inline void create_mesh_2D(const Gedim::GeometryUtilities &geometry_utilities,
-                           const Gedim::MeshUtilities &mesh_utilities,
                            const Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_2D &mesh_type,
                            const Polydim::PDETools::Mesh::PDE_Mesh_Utilities::PDE_Domain_2D &pde_domain,
                            const double &max_relative_area,
@@ -200,12 +199,12 @@ inline void create_mesh_2D(const Gedim::GeometryUtilities &geometry_utilities,
         throw std::runtime_error("Triangle library not active");
 #endif
         const double max_cell_area = pde_domain.area * max_relative_area;
-        mesh_utilities.CreateTriangularMesh(pde_domain.vertices, max_cell_area, mesh);
+        Gedim::External::MeshUtilities::CreateTriangularMesh(pde_domain.vertices, max_cell_area, mesh);
     }
     break;
     case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_2D::Minimal: {
         const std::vector<unsigned int> markers = {};
-        mesh_utilities.Mesh2DFromPolygon(pde_domain.vertices, markers, markers, mesh);
+        Gedim::MeshUtilities::Mesh2DFromPolygon(pde_domain.vertices, markers, markers, mesh);
     }
     break;
     case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_2D::Polygonal: {
@@ -214,7 +213,7 @@ inline void create_mesh_2D(const Gedim::GeometryUtilities &geometry_utilities,
 #endif
         const unsigned num_cells = static_cast<unsigned int>(std::max(1.0, 1.0 / max_relative_area));
 
-        mesh_utilities.CreatePolygonalMesh(geometry_utilities, pde_domain.vertices, num_cells, 10, mesh, 10);
+        Gedim::External::MeshUtilities::CreatePolygonalMesh(geometry_utilities, pde_domain.vertices, num_cells, 10, mesh, 10);
     }
     break;
     case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_2D::Squared: {
@@ -234,12 +233,12 @@ inline void create_mesh_2D(const Gedim::GeometryUtilities &geometry_utilities,
         const unsigned int num_cells_base = ceil(domain_base_tangent.norm() / max_cell_edge);
         const unsigned int num_cells_height = ceil(domain_height_tangent.norm() / max_cell_edge);
 
-        mesh_utilities.CreateRectangleMesh(domain_origin,
-                                           domain_base_tangent,
-                                           domain_height_tangent,
-                                           geometry_utilities.EquispaceCoordinates(num_cells_base + 1, 0.0, 1.0, true),
-                                           geometry_utilities.EquispaceCoordinates(num_cells_height + 1, 0.0, 1.0, true),
-                                           mesh);
+        Gedim::MeshUtilities::CreateRectangleMesh(domain_origin,
+                                                  domain_base_tangent,
+                                                  domain_height_tangent,
+                                                  geometry_utilities.EquispaceCoordinates(num_cells_base + 1, 0.0, 1.0, true),
+                                                  geometry_utilities.EquispaceCoordinates(num_cells_height + 1, 0.0, 1.0, true),
+                                                  mesh);
     }
     break;
     case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_2D::StructuredTriangular: {
@@ -259,12 +258,13 @@ inline void create_mesh_2D(const Gedim::GeometryUtilities &geometry_utilities,
         const unsigned int num_cells_base = ceil(domain_base_tangent.norm() / max_cell_edge);
         const unsigned int num_cells_height = ceil(domain_height_tangent.norm() / max_cell_edge);
 
-        mesh_utilities.CreateStructuredTriangularMesh(domain_origin,
-                                                      domain_base_tangent,
-                                                      domain_height_tangent,
-                                                      geometry_utilities.EquispaceCoordinates(num_cells_base + 1, 0.0, 1.0, true),
-                                                      geometry_utilities.EquispaceCoordinates(num_cells_height + 1, 0.0, 1.0, true),
-                                                      mesh);
+        Gedim::MeshUtilities::CreateStructuredTriangularMesh(
+            domain_origin,
+            domain_base_tangent,
+            domain_height_tangent,
+            geometry_utilities.EquispaceCoordinates(num_cells_base + 1, 0.0, 1.0, true),
+            geometry_utilities.EquispaceCoordinates(num_cells_height + 1, 0.0, 1.0, true),
+            mesh);
     }
     break;
     case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_2D::RandomDistorted: {
@@ -284,20 +284,20 @@ inline void create_mesh_2D(const Gedim::GeometryUtilities &geometry_utilities,
         const unsigned int num_cells_base = ceil(domain_base_tangent.norm() / max_cell_edge);
         const unsigned int num_cells_height = ceil(domain_height_tangent.norm() / max_cell_edge);
 
-        mesh_utilities.CreateRandomlyDeformedQuadrilaterals(geometry_utilities,
-                                                            domain_origin,
-                                                            domain_base_tangent,
-                                                            domain_height_tangent,
-                                                            num_cells_base,
-                                                            num_cells_height,
-                                                            0.4,
-                                                            0.4,
-                                                            mesh);
+        Gedim::MeshUtilities::CreateRandomlyDeformedQuadrilaterals(geometry_utilities,
+                                                                   domain_origin,
+                                                                   domain_base_tangent,
+                                                                   domain_height_tangent,
+                                                                   num_cells_base,
+                                                                   num_cells_height,
+                                                                   0.4,
+                                                                   0.4,
+                                                                   mesh);
     }
     break;
     case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_2D::QuadFromTriangular: {
         const double max_cell_area = pde_domain.area * max_relative_area;
-        mesh_utilities.CreateQuadrilateralMeshFromTriangularMesh(geometry_utilities, pde_domain.vertices, max_cell_area, mesh);
+        Gedim::External::MeshUtilities::CreateQuadrilateralMeshFromTriangularMesh(geometry_utilities, pde_domain.vertices, max_cell_area, mesh);
     }
     break;
     default:
@@ -313,7 +313,6 @@ inline void create_mesh_2D(const Gedim::GeometryUtilities &geometry_utilities,
 /// @p max_relative_volume (target cell volume relative to the domain volume).
 ///
 /// @param geometry_utilities  GeDiM geometry helper.
-/// @param mesh_utilities      GeDiM mesh helper.
 /// @param mesh_type           Generator to use.
 /// @param pde_domain          3D domain (vertices, edges and faces).
 /// @param max_relative_volume Target cell volume relative to the domain volume.
@@ -321,7 +320,6 @@ inline void create_mesh_2D(const Gedim::GeometryUtilities &geometry_utilities,
 /// @throws std::runtime_error if @p mesh_type is unsupported, a required library
 ///         (TetGen, Voro++) is disabled, or the cubic generator is used on a non-parallelepiped domain.
 inline void create_mesh_3D(const Gedim::GeometryUtilities &geometry_utilities,
-                           const Gedim::MeshUtilities &mesh_utilities,
                            const Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_3D &mesh_type,
                            const Polydim::PDETools::Mesh::PDE_Mesh_Utilities::PDE_Domain_3D &pde_domain,
                            const double &max_relative_volume,
@@ -334,12 +332,12 @@ inline void create_mesh_3D(const Gedim::GeometryUtilities &geometry_utilities,
         throw std::runtime_error("Tetgen library not active");
 #endif
         const double max_cell_volume = pde_domain.volume * max_relative_volume;
-        mesh_utilities.CreateTetrahedralMesh(pde_domain.vertices, pde_domain.edges, pde_domain.faces, max_cell_volume, mesh);
+        Gedim::External::MeshUtilities::CreateTetrahedralMesh(pde_domain.vertices, pde_domain.edges, pde_domain.faces, max_cell_volume, mesh);
     }
     break;
     case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_3D::Minimal: {
         const std::vector<unsigned int> markers = {};
-        mesh_utilities.Mesh3DFromPolyhedron(pde_domain.vertices, pde_domain.edges, pde_domain.faces, markers, markers, markers, mesh);
+        Gedim::MeshUtilities::Mesh3DFromPolyhedron(pde_domain.vertices, pde_domain.edges, pde_domain.faces, markers, markers, markers, mesh);
     }
     break;
     case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_3D::Polyhedral: {
@@ -348,7 +346,14 @@ inline void create_mesh_3D(const Gedim::GeometryUtilities &geometry_utilities,
 #endif
         const unsigned num_cells = static_cast<unsigned int>(std::max(1.0, 1.0 / max_relative_volume));
 
-        mesh_utilities.CreatePolyhedralMesh(geometry_utilities, pde_domain.vertices, pde_domain.edges, pde_domain.faces, num_cells, 10, mesh, 10);
+        Gedim::External::MeshUtilities::CreatePolyhedralMesh(geometry_utilities,
+                                                             pde_domain.vertices,
+                                                             pde_domain.edges,
+                                                             pde_domain.faces,
+                                                             num_cells,
+                                                             10,
+                                                             mesh,
+                                                             10);
     }
     break;
     case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_3D::Cubic: {
@@ -370,14 +375,15 @@ inline void create_mesh_3D(const Gedim::GeometryUtilities &geometry_utilities,
         const unsigned int num_cells_width = round(domain_width_tangent.norm() / max_cell_edge);
         const unsigned int num_cells_height = round(domain_heigth_tangent.norm() / max_cell_edge);
 
-        mesh_utilities.CreateParallelepipedMesh(domain_origin,
-                                                domain_base_tangent,
-                                                domain_heigth_tangent,
-                                                domain_width_tangent,
-                                                geometry_utilities.EquispaceCoordinates(num_cells_base + 1, 0.0, 1.0, true),
-                                                geometry_utilities.EquispaceCoordinates(num_cells_height + 1, 0.0, 1.0, true),
-                                                geometry_utilities.EquispaceCoordinates(num_cells_width + 1, 0.0, 1.0, true),
-                                                mesh);
+        Gedim::MeshUtilities::CreateParallelepipedMesh(
+            domain_origin,
+            domain_base_tangent,
+            domain_heigth_tangent,
+            domain_width_tangent,
+            geometry_utilities.EquispaceCoordinates(num_cells_base + 1, 0.0, 1.0, true),
+            geometry_utilities.EquispaceCoordinates(num_cells_height + 1, 0.0, 1.0, true),
+            geometry_utilities.EquispaceCoordinates(num_cells_width + 1, 0.0, 1.0, true),
+            mesh);
     }
     break;
     default:
@@ -417,13 +423,11 @@ inline void import_mesh_1D(const Polydim::PDETools::Mesh::PDE_Mesh_Utilities::Me
 /// triangular-mesh importer reading @c Cell0Ds / @c Cell2Ds / @c Cell2DsMarker CSV files.
 ///
 /// @param geometry_utilities GeDiM geometry helper.
-/// @param mesh_utilities     GeDiM mesh helper.
 /// @param mesh_type          Importer to use.
 /// @param file_path          Path to the mesh folder/file.
 /// @param[out] mesh          Resulting mesh.
 /// @throws std::runtime_error if @p mesh_type is not a supported 2D importer.
 inline void import_mesh_2D(const Gedim::GeometryUtilities &geometry_utilities,
-                           const Gedim::MeshUtilities &mesh_utilities,
                            const Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_2D &mesh_type,
                            const std::string &file_path,
                            Gedim::MeshMatricesDAO &mesh)
@@ -440,16 +444,16 @@ inline void import_mesh_2D(const Gedim::GeometryUtilities &geometry_utilities,
     }
     break;
     case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_2D::OFFImporter: {
-        mesh_utilities.ImportObjectFileFormat(file_path, mesh);
+        Gedim::MeshUtilities::ImportObjectFileFormat(file_path, mesh);
     }
     break;
     case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_2D::TriangularSimpleImporter: {
-        mesh_utilities.ImportTriangularMesh(geometry_utilities,
-                                            file_path + "/Cell0Ds.csv",
-                                            file_path + "/Cell2Ds.csv",
-                                            file_path + "/Cell2DsMarker.csv",
-                                            ',',
-                                            mesh);
+        Gedim::MeshUtilities::ImportTriangularMesh(geometry_utilities,
+                                                   file_path + "/Cell0Ds.csv",
+                                                   file_path + "/Cell2Ds.csv",
+                                                   file_path + "/Cell2DsMarker.csv",
+                                                   ',',
+                                                   mesh);
     }
     break;
     default:
@@ -461,13 +465,11 @@ inline void import_mesh_2D(const Gedim::GeometryUtilities &geometry_utilities,
 ///
 /// Supports CSV import (GeDiM cell files), OpenVolumeMesh (OVM), and VTK import.
 ///
-/// @param mesh_utilities GeDiM mesh helper.
 /// @param mesh_type      Importer to use.
 /// @param file_path      Path to the mesh folder/file.
 /// @param[out] mesh      Resulting mesh.
 /// @throws std::runtime_error if @p mesh_type is not a supported 3D importer.
-inline void import_mesh_3D(const Gedim::MeshUtilities &mesh_utilities,
-                           const Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_3D &mesh_type,
+inline void import_mesh_3D(const Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_3D &mesh_type,
                            const std::string &file_path,
                            Gedim::MeshMatricesDAO &mesh)
 {
@@ -484,11 +486,11 @@ inline void import_mesh_3D(const Gedim::MeshUtilities &mesh_utilities,
     break;
     case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_3D::OVMImporter: {
         std::vector<std::vector<bool>> meshCell3DsFacesOrientation;
-        mesh_utilities.ImportOpenVolumeMesh(file_path, mesh, meshCell3DsFacesOrientation);
+        Gedim::MeshUtilities::ImportOpenVolumeMesh(file_path, mesh, meshCell3DsFacesOrientation);
     }
     break;
     case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_3D::VtkImporter: {
-        mesh_utilities.ImportVtkMesh3D(file_path, mesh);
+        Gedim::External::MeshUtilities::ImportVtkMesh3D(file_path, mesh);
     }
     break;
     default:
@@ -499,14 +501,12 @@ inline void import_mesh_3D(const Gedim::MeshUtilities &mesh_utilities,
 /// @brief Precompute the per-cell geometric data of a 1D mesh.
 ///
 /// @param geometry_utilities GeDiM geometry helper.
-/// @param mesh_utilities     GeDiM mesh helper.
 /// @param mesh               Input mesh.
 /// @return The 1D geometric data required by the local spaces.
 inline Gedim::MeshUtilities::MeshGeometricData1D compute_mesh_1D_geometry_data(const Gedim::GeometryUtilities &geometry_utilities,
-                                                                               const Gedim::MeshUtilities &mesh_utilities,
                                                                                const Gedim::MeshMatricesDAO &mesh)
 {
-    return mesh_utilities.FillMesh1DGeometricData(geometry_utilities, mesh);
+    return Gedim::MeshUtilities::FillMesh1DGeometricData(geometry_utilities, mesh);
 }
 
 /// @brief Precompute the per-cell geometric data of a 2D mesh.
@@ -515,20 +515,18 @@ inline Gedim::MeshUtilities::MeshGeometricData1D compute_mesh_1D_geometry_data(c
 /// quantities to compute is controlled by @p mesh_geometric_data_config (all enabled by default).
 ///
 /// @param geometry_utilities         GeDiM geometry helper.
-/// @param mesh_utilities             GeDiM mesh helper.
 /// @param mesh                       Input mesh.
 /// @param mesh_geometric_data_config Which geometric quantities to precompute.
 /// @return The 2D geometric data required by the local spaces.
 inline Gedim::MeshUtilities::MeshGeometricData2D compute_mesh_2D_geometry_data(
     const Gedim::GeometryUtilities &geometry_utilities,
-    const Gedim::MeshUtilities &mesh_utilities,
     const Gedim::MeshMatricesDAO &mesh,
     const Gedim::MeshUtilities::MeshGeometricData2DConfig &mesh_geometric_data_config =
         Gedim::MeshUtilities::MeshGeometricData2DConfig(true, true, true, true, true, true, true, true, true, true, true, true, true))
 {
     std::vector<Gedim::GeometryUtilities::PolygonTypes> cell2Ds_types(mesh.Cell2DTotalNumber(),
                                                                       Gedim::GeometryUtilities::PolygonTypes::Generic_Concave);
-    return mesh_utilities.FillMesh2DGeometricData(geometry_utilities, mesh, cell2Ds_types, mesh_geometric_data_config);
+    return Gedim::MeshUtilities::FillMesh2DGeometricData(geometry_utilities, mesh, cell2Ds_types, mesh_geometric_data_config);
 }
 
 /// @brief Precompute the per-cell geometric data of a 3D mesh.
@@ -541,9 +539,8 @@ inline Gedim::MeshUtilities::MeshGeometricData2D compute_mesh_2D_geometry_data(
 inline Gedim::MeshUtilities::MeshGeometricData3D compute_mesh_3D_geometry_data(const Gedim::GeometryUtilities &geometry_utilities,
                                                                                Gedim::MeshMatricesDAO &mesh)
 {
-    Gedim::MeshUtilities mesh_utilities;
-    mesh_utilities.ComputeCell2DCell3DNeighbours(mesh);
-    return mesh_utilities.FillMesh3DGeometricData(geometry_utilities, mesh);
+    Gedim::MeshUtilities::ComputeCell2DCell3DNeighbours(mesh);
+    return Gedim::MeshUtilities::FillMesh3DGeometricData(geometry_utilities, mesh);
 }
 } // namespace PDE_Mesh_Utilities
 } // namespace Mesh

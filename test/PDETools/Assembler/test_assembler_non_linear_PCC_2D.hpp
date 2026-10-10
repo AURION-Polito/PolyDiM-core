@@ -19,7 +19,6 @@
 #include "Eigen_LUSolver.hpp"
 #include "LocalSpace_PCC_2D.hpp"
 #include "MeshMatricesDAO_mesh_connectivity_data.hpp"
-#include "MeshUtilities.hpp"
 #include "PDE_Mesh_Utilities.hpp"
 #include "VTKUtilities.hpp"
 #include "assembler_PCC_2D_functions.hpp"
@@ -48,13 +47,10 @@ TEST(TEST_assembler_non_linear_PCC_2D, TEST_assembler_non_linear_example)
     domain.vertices.row(1) << 0.0, 0.0, 1.0, 1.0;
     domain.shape_type = Polydim::PDETools::Mesh::PDE_Mesh_Utilities::PDE_Domain_2D::Domain_Shape_Types::Parallelogram;
 
-    Gedim::MeshUtilities mesh_utilities;
-
     Gedim::MeshMatrices meshData;
     Gedim::MeshMatricesDAO mesh(meshData);
 
     Polydim::PDETools::Mesh::PDE_Mesh_Utilities::create_mesh_2D(geometry_utilities,
-                                                                mesh_utilities,
                                                                 Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_2D::Triangular,
                                                                 domain,
                                                                 0.01,
@@ -71,7 +67,6 @@ TEST(TEST_assembler_non_linear_PCC_2D, TEST_assembler_non_linear_example)
 
     const auto mesh_geometric_data = Polydim::PDETools::Mesh::PDE_Mesh_Utilities::compute_mesh_2D_geometry_data(
         geometry_utilities,
-        mesh_utilities,
         mesh,
         Polydim::PDETools::LocalSpace_PCC_2D::MeshGeometricDataConfigiguration(trial_reference_element_data));
 
