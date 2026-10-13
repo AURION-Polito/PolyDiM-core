@@ -8,7 +8,7 @@ See the official documentation at the [official website](https://polydim.it/) fo
 
 This file can be used by citing references in CITATION.cff file.
 
-**PolyDiM-core** is the core of the library and requires [**GeDiM-core**](https://github.com/AURION-Polito/GeDiM-core) and **3rd_party_libraries** to be installed.
+**PolyDiM-core** is the core of the library and requires [**GeDiM-core**](https://github.com/AURION-Polito/GeDiM-core) and [**3rd_party_libraries**](https://github.com/AURION-Polito/3rd_party_libraries) to be installed.
 
 >[!TIP]
 >For complete functionality, including examples, tests, and full documentation, please install and refer to the main [**PolyDiM**](https://github.com/AURION-Polito/PolyDiM) library.
