@@ -12,6 +12,7 @@
 #ifndef __PDETOOLS_MESH_PDE_Mesh_Utilities_HPP
 #define __PDETOOLS_MESH_PDE_Mesh_Utilities_HPP
 
+#include "Gedim_Macro.hpp"
 #include "MeshDAOImporterFromCsv.hpp"
 #include "MeshFromCsvUtilities.hpp"
 #include "MeshUtilities.hpp"

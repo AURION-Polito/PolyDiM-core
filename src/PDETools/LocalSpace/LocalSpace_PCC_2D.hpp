@@ -14,6 +14,7 @@
 
 #include "DOFsManager.hpp"
 #include "FEM_PCC_2D_LocalSpace.hpp"
+#include "Gedim_Macro.hpp"
 #include "IArray.hpp"
 #include "I_VEM_PCC_2D_ReferenceElement.hpp"
 #include "I_ZFEM_PCC_2D_LocalSpace.hpp"

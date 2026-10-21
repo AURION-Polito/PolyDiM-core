@@ -15,6 +15,7 @@
 #include "Assembler_Utilities.hpp"
 #include "DOFsManager.hpp"
 #include "FEM_PCC_2D_LocalSpace.hpp"
+#include "Gedim_Macro.hpp"
 #include "IArray.hpp"
 #include "I_VEM_DF_PCC_2D_ReferenceElement.hpp"
 #include "VEM_DF_PCC_2D_Creator.hpp"
