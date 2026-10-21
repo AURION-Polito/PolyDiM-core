@@ -11,10 +11,13 @@
 
 #include "LocalSpace_PCC_2D.hpp"
 #include "CommonUtilities.hpp"
-#include "VTKUtilities.hpp"
 #include "ZFEM_PCC_2D_Creator.hpp"
 #include <memory>
 #include <numbers>
+
+#if EXTRACT_CORE == 0
+#include "VTKUtilities.hpp"
+#endif
 
 namespace Polydim
 {
@@ -660,6 +663,7 @@ Performance_Data ComputePerformance(const ReferenceElement_Data &reference_eleme
 
     return performance;
 }
+#if EXTRACT_CORE == 0
 //***************************************************************************
 void export_dofs(const Gedim::GeometryUtilities &geometry_utilities,
                  const Gedim::MeshMatricesDAO &mesh,
@@ -869,6 +873,7 @@ void export_dofs(const Gedim::GeometryUtilities &geometry_utilities,
 
     exporter.Export(file_path);
 }
+#endif
 //***************************************************************************
 } // namespace LocalSpace_PCC_2D
 } // namespace PDETools

@@ -285,6 +285,7 @@ Polydim::PDETools::LocalSpace_DF_PCC_2D::Performance_Data ComputePerformance(
     const Polydim::PDETools::LocalSpace_DF_PCC_2D::ReferenceElement_Data &reference_element_data,
     const Polydim::PDETools::LocalSpace_DF_PCC_2D::LocalSpace_Data &local_space_data);
 
+#if EXTRACT_CORE == 0
 /// @brief Export the velocity DOFs and solution fields to file for visualization.
 ///
 /// Writes the right-hand side, the computed solution and the strongly-imposed
@@ -312,6 +313,7 @@ void export_velocity_dofs(const Gedim::GeometryUtilities &geometry_utilities,
                           const Gedim::IArray &solution_strongs,
                           const std::string &file_path);
 
+#endif
 } // namespace LocalSpace_DF_PCC_2D
 } // namespace PDETools
 } // namespace Polydim

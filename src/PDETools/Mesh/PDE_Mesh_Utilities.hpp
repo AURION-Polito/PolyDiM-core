@@ -15,10 +15,13 @@
 #include "MeshDAOImporterFromCsv.hpp"
 #include "MeshFromCsvUtilities.hpp"
 #include "MeshUtilities.hpp"
+
+#if EXTRACT_CORE == 0
 #include "TetgenInterface.hpp"
 #include "TriangleInterface.hpp"
 #include "VoroInterface.hpp"
 #include "VtkMeshInterface.hpp"
+#endif
 
 namespace Polydim
 {
@@ -104,25 +107,30 @@ enum class MeshGenerator_Types_1D
 
 enum class MeshGenerator_Types_2D
 {
-    Triangular = 0,               ///< generated triangular mesh
+
+#if EXTRACT_CORE == 0
+    Triangular = 0,         ///< generated triangular mesh
+    Polygonal = 2,          ///< generated voronoi polygonal mesh
+    QuadFromTriangular = 9, ///< generate quadrilateral mesh starting fromt triangular
+#endif
     Minimal = 1,                  ///< generated minimal mesh
-    Polygonal = 2,                ///< generated voronoi polygonal mesh
     OFFImporter = 3,              ///< imported off mesh
     CsvImporter = 4,              ///< imported csv mesh
     Squared = 5,                  ///< squared mesh
     RandomDistorted = 6,          ///< random distorted
     TriangularSimpleImporter = 7, ///< import 2D triangular mesh
     StructuredTriangular = 8,     ///<
-    QuadFromTriangular = 9        ///< generate quadrilateral mesh starting fromt triangular
 };
 
 enum class MeshGenerator_Types_3D
 {
+#if EXTRACT_CORE == 0
     Tetrahedral = 0, ///< generated tetrahedral mesh
-    Minimal = 1,     ///< generated minimal mesh
     Polyhedral = 2,  ///< generated voronoi polyhedral mesh
-    OVMImporter = 3, ///< imported ovm mesh
     VtkImporter = 4, ///< imported vtk mesh
+#endif
+    Minimal = 1,     ///< generated minimal mesh
+    OVMImporter = 3, ///< imported ovm mesh
     CsvImporter = 5, ///< imported csv mesh
     Cubic = 6        ///< cubic mesh
 };
@@ -194,17 +202,13 @@ inline void create_mesh_2D(const Gedim::GeometryUtilities &geometry_utilities,
 {
     switch (mesh_type)
     {
+#if EXTRACT_CORE == 0
     case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_2D::Triangular: {
 #if ENABLE_TRIANGLE == 0
         throw std::runtime_error("Triangle library not active");
 #endif
         const double max_cell_area = pde_domain.area * max_relative_area;
         Gedim::External::MeshUtilities::CreateTriangularMesh(pde_domain.vertices, max_cell_area, mesh);
-    }
-    break;
-    case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_2D::Minimal: {
-        const std::vector<unsigned int> markers = {};
-        Gedim::MeshUtilities::Mesh2DFromPolygon(pde_domain.vertices, markers, markers, mesh);
     }
     break;
     case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_2D::Polygonal: {
@@ -214,6 +218,17 @@ inline void create_mesh_2D(const Gedim::GeometryUtilities &geometry_utilities,
         const unsigned num_cells = static_cast<unsigned int>(std::max(1.0, 1.0 / max_relative_area));
 
         Gedim::External::MeshUtilities::CreatePolygonalMesh(geometry_utilities, pde_domain.vertices, num_cells, 10, mesh, 10);
+    }
+    break;
+    case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_2D::QuadFromTriangular: {
+        const double max_cell_area = pde_domain.area * max_relative_area;
+        Gedim::External::MeshUtilities::CreateQuadrilateralMeshFromTriangularMesh(geometry_utilities, pde_domain.vertices, max_cell_area, mesh);
+    }
+    break;
+#endif
+    case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_2D::Minimal: {
+        const std::vector<unsigned int> markers = {};
+        Gedim::MeshUtilities::Mesh2DFromPolygon(pde_domain.vertices, markers, markers, mesh);
     }
     break;
     case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_2D::Squared: {
@@ -295,11 +310,6 @@ inline void create_mesh_2D(const Gedim::GeometryUtilities &geometry_utilities,
                                                                    mesh);
     }
     break;
-    case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_2D::QuadFromTriangular: {
-        const double max_cell_area = pde_domain.area * max_relative_area;
-        Gedim::External::MeshUtilities::CreateQuadrilateralMeshFromTriangularMesh(geometry_utilities, pde_domain.vertices, max_cell_area, mesh);
-    }
-    break;
     default:
         throw std::runtime_error("MeshGenerator_Types_2D " + std::to_string((unsigned int)mesh_type) + " not supported");
     }
@@ -327,17 +337,13 @@ inline void create_mesh_3D(const Gedim::GeometryUtilities &geometry_utilities,
 {
     switch (mesh_type)
     {
+#if EXTRACT_CORE == 0
     case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_3D::Tetrahedral: {
 #if ENABLE_TETGEN == 0
         throw std::runtime_error("Tetgen library not active");
 #endif
         const double max_cell_volume = pde_domain.volume * max_relative_volume;
         Gedim::External::MeshUtilities::CreateTetrahedralMesh(pde_domain.vertices, pde_domain.edges, pde_domain.faces, max_cell_volume, mesh);
-    }
-    break;
-    case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_3D::Minimal: {
-        const std::vector<unsigned int> markers = {};
-        Gedim::MeshUtilities::Mesh3DFromPolyhedron(pde_domain.vertices, pde_domain.edges, pde_domain.faces, markers, markers, markers, mesh);
     }
     break;
     case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_3D::Polyhedral: {
@@ -354,6 +360,12 @@ inline void create_mesh_3D(const Gedim::GeometryUtilities &geometry_utilities,
                                                              10,
                                                              mesh,
                                                              10);
+    }
+    break;
+#endif
+    case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_3D::Minimal: {
+        const std::vector<unsigned int> markers = {};
+        Gedim::MeshUtilities::Mesh3DFromPolyhedron(pde_domain.vertices, pde_domain.edges, pde_domain.faces, markers, markers, markers, mesh);
     }
     break;
     case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_3D::Cubic: {
@@ -489,10 +501,12 @@ inline void import_mesh_3D(const Polydim::PDETools::Mesh::PDE_Mesh_Utilities::Me
         Gedim::MeshUtilities::ImportOpenVolumeMesh(file_path, mesh, meshCell3DsFacesOrientation);
     }
     break;
+#if EXTRACT_CORE == 0
     case Polydim::PDETools::Mesh::PDE_Mesh_Utilities::MeshGenerator_Types_3D::VtkImporter: {
         Gedim::External::MeshUtilities::ImportVtkMesh3D(file_path, mesh);
     }
     break;
+#endif
     default:
         throw std::runtime_error("MeshGenerator_Types_3D " + std::to_string((unsigned int)mesh_type) + " not supported");
     }

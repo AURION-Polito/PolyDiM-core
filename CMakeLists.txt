@@ -52,6 +52,7 @@ else()
       list(APPEND POLYDIM_LIBRARY_INCLUDE ${GEDIM_LIBRARY_INCLUDE_DIRECTORIES})
 endif()
 
+if(NOT ${EXTRACT_CORE})
 ## 3rd_party_libraries
 if (NOT TARGET 3rd_party_libraries::3rd_party_libraries)
       find_package(3rd_party_libraries CONFIG REQUIRED)
@@ -66,6 +67,7 @@ else()
       list(APPEND POLYDIM_LIBRARY_LINKED_LIBRARIES PRIVATE ${3rd_party_libraries_LIBRARY_NAME} ${3rd_party_libraries_LIBRARY_LINKED_LIBRARIES})
       list(APPEND POLYDIM_LIBRARY_HEADERS ${3rd_party_libraries_LIBRARY_HEADERS})
       list(APPEND POLYDIM_LIBRARY_INCLUDE ${3rd_party_libraries_LIBRARY_INCLUDE_DIRECTORIES})
+endif()
 endif()
 
 ## MPI
@@ -82,6 +84,7 @@ find_package(BLAS REQUIRED)
 ## Lapack
 find_package(LAPACK REQUIRED)
 
+if(NOT ${EXTRACT_CORE})
 ## VTK
 if(${ENABLE_VTK})
       find_package(VTK CONFIG REQUIRED)
@@ -105,6 +108,7 @@ endif()
 ## METIS
 if(${ENABLE_METIS})
       find_package(metis CONFIG REQUIRED)
+endif()
 endif()
 
 # Insert Sources
